@@ -85,7 +85,7 @@ class SmoothPinCodeInput extends Component {
   render() {
     const {
       value,
-      codeLength, cellSize, cellSpacing,
+      codeRows, codeLength, cellSize, cellSpacing,
       placeholder,
       password,
       mask,
@@ -97,61 +97,73 @@ class SmoothPinCodeInput extends Component {
       textStyleFocused,
       keyboardType,
       animationFocused,
+      ignoreCase
     } = this.props;
     const { maskDelay, focused } = this.state;
     return (
       <Animatable.View
         ref={this.ref}
         style={[{
-          alignItems: 'stretch', flexDirection: 'row', justifyContent: 'center', position: 'relative',
+          alignItems: 'stretch', justifyContent: 'center', position: 'relative',
           width: cellSize * codeLength + cellSpacing * (codeLength - 1),
-          height: cellSize,
+          height: cellSize*codeRows + cellSpacing * (codeRows - 1),
         },
           containerStyle,
         ]}>
-        <View style={{
-          position: 'absolute', margin: 0, height: '100%',
-          flexDirection: 'row',
-          alignItems: 'center',
-        }}>
-          {
-            Array.apply(null, Array(codeLength)).map((_, idx) => {
-              const cellFocused = focused && idx === value.length;
-              const filled = idx < value.length;
-              const last = (idx === value.length - 1);
+        <View>
+        {
+          Array.apply(null, Array(codeRows)).map((_, row) => {
+            return (
+              <View style={{
+                position: 'absolute', margin: 0, height: '100%',
+                flexDirection: 'row',
+                alignItems: 'center',
+                top: row*cellSize + row*cellSpacing
+              }}
+              key={row}
+              >
+                {
+                  Array.apply(null, Array(codeLength)).map((_, idx) => {
+                    const gIdx = row*codeLength + idx
+                    const cellFocused = focused && gIdx === value.length;
+                    const filled = gIdx < value.length;
+                    const last = (gIdx === value.length - 1);
 
-              return (
-                <Animatable.View
-                  key={idx}
-                  style={[
-                    {
-                      width: cellSize,
-                      height: cellSize,
-                      marginLeft: cellSpacing / 2,
-                      marginRight: cellSpacing / 2,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    },
-                    cellStyle,
-                    cellFocused ? cellStyleFocused : {},
-                  ]}
-                  animation={idx === value.length && focused ? animationFocused : null}
-                  iterationCount="infinite"
-                  duration={500}
-                >
-                  <Text
-                    style={[
-                      textStyle,
-                      cellFocused ? textStyleFocused : {},
-                    ]}>
-                    {filled && (password && (!maskDelay || !last)) ? mask : value.charAt(idx)}
-                    {!filled && placeholder}
-                  </Text>
-                </Animatable.View>
-              );
-            })
-          }
+                    return (
+                      <Animatable.View
+                        key={gIdx}
+                        style={[
+                          {
+                            width: cellSize,
+                            height: cellSize,
+                            marginLeft: cellSpacing / 2,
+                            marginRight: cellSpacing / 2,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          },
+                          cellStyle,
+                          cellFocused ? cellStyleFocused : {},
+                        ]}
+                        animation={gIdx === value.length && focused ? animationFocused : null}
+                        iterationCount="infinite"
+                        duration={500}
+                      >
+                        <Text
+                          style={[
+                            textStyle,
+                            cellFocused ? textStyleFocused : {},
+                          ]}>
+                          {filled && (password && (!maskDelay || !last)) ? mask : (value ? value.toUpperCase().charAt(gIdx) : '')}
+                          {!filled && placeholder}
+                        </Text>
+                      </Animatable.View>
+                    );
+                  })
+                }
+              </View>
+            );
+        })}
         </View>
         <TextInput
           value={value}
@@ -163,8 +175,8 @@ class SmoothPinCodeInput extends Component {
           spellCheck={false}
           autoFocus={autoFocus}
           keyboardType={keyboardType}
-          numberOfLines={1}
-          maxLength={codeLength}
+          numberOfLines={codeRows}
+          maxLength={codeRows*codeLength}
           selection={{
             start: value.length,
             end: value.length,
@@ -180,6 +192,7 @@ class SmoothPinCodeInput extends Component {
 
   static defaultProps = {
     value: '',
+    codeRows: 1,
     codeLength: 4,
     cellSize: 48,
     cellSpacing: 4,
@@ -194,6 +207,7 @@ class SmoothPinCodeInput extends Component {
     textStyle: styles.textStyleDefault,
     textStyleFocused: styles.textStyleFocusedDefault,
     animationFocused: 'pulse',
+    ignoreCase: false
   };
 }
 

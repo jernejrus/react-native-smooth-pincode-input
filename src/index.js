@@ -6,6 +6,7 @@ import {
   TextInput,
   StyleSheet,
   ViewPropTypes,
+  TouchableOpacity,
 } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 
@@ -17,7 +18,7 @@ const styles = StyleSheet.create({
   },
   cellFocusedDefault: {
     borderColor: 'black',
-    borderWidth: 2,
+    borderWidth: 1,
   },
   textStyleDefault: {
     color: 'gray',
@@ -125,7 +126,7 @@ class SmoothPinCodeInput extends Component {
                 {
                   Array.apply(null, Array(codeLength)).map((_, idx) => {
                     const gIdx = row*codeLength + idx
-                    const cellFocused = focused && gIdx === value.length;
+                    const cellFocused = focused && ((gIdx === value.length) || (value.length === codeLength*codeRows && gIdx === value.length - 1));
                     const filled = gIdx < value.length;
                     const last = (gIdx === value.length - 1);
 
@@ -165,6 +166,20 @@ class SmoothPinCodeInput extends Component {
             );
         })}
         </View>
+        <TouchableOpacity
+          style={{
+              flex: 1,
+              opacity: 0,
+              textAlign: 'center',
+              alignItems: "flex-end",
+              flexDirection: "row",
+              marginTop: -cellSize/2,
+              marginBottom: cellSize/2,
+              marginLeft: cellSpacing/2,
+              marginRight: -cellSpacing/2,
+            }}
+          onPress={() => this.inputRef && this.inputRef.current.focus()}
+        >
         <TextInput
           value={value}
           ref={this.inputRef}
@@ -182,10 +197,10 @@ class SmoothPinCodeInput extends Component {
             end: value.length,
           }}
           style={{
-            flex: 1,
-            opacity: 0,
             textAlign: 'center',
+            opacity: 0
           }} />
+          </TouchableOpacity>
       </Animatable.View>
     );
   }

@@ -181,6 +181,7 @@ class SmoothPinCodeInput extends Component {
           onPress={() => this.inputRef && this.inputRef.current.focus()}
         >
         <TextInput
+          textContentType={'password'}
           value={value}
           ref={this.inputRef}
           onChangeText={this._inputCode}

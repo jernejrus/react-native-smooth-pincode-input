@@ -98,7 +98,8 @@ class SmoothPinCodeInput extends Component {
       textStyleFocused,
       keyboardType,
       animationFocused,
-      ignoreCase
+      ignoreCase,
+      testID
     } = this.props;
     const { maskDelay, focused } = this.state;
     return (
@@ -184,6 +185,7 @@ class SmoothPinCodeInput extends Component {
           textContentType={'password'}
           value={value}
           ref={this.inputRef}
+          testID={this.testID}
           onChangeText={this._inputCode}
           onKeyPress={this._keyPress}
           onFocus={() => this._onFocused(true)}

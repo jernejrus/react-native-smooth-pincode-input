@@ -7,8 +7,13 @@ import {
   StyleSheet,
   ViewPropTypes,
   TouchableOpacity,
+  Clipboard
 } from 'react-native';
 import * as Animatable from 'react-native-animatable';
+import Tooltip from 'react-native-walkthrough-tooltip';
+
+import {observer, inject} from "mobx-react/native";
+import {observable, action, computed, reaction} from "mobx";
 
 const styles = StyleSheet.create({
   containerDefault: {},
@@ -29,12 +34,16 @@ const styles = StyleSheet.create({
   },
 });
 
+@observer
 class SmoothPinCodeInput extends Component {
 
   state = {
     maskDelay: false,
     focused: false,
   };
+
+  @observable toolTipVisible = false
+
   ref = React.createRef();
   inputRef = React.createRef();
 
@@ -51,6 +60,8 @@ class SmoothPinCodeInput extends Component {
   };
 
   _inputCode = (code) => {
+    this.setState({ toolTipVisible: false })
+
     const { password, codeLength = 4, onTextChange, onFulfill } = this.props;
 
     if (onTextChange) {
@@ -99,112 +110,160 @@ class SmoothPinCodeInput extends Component {
       keyboardType,
       animationFocused,
       ignoreCase,
-      testID
+      testID,
+      enableTooltip
     } = this.props;
     const { maskDelay, focused } = this.state;
     return (
-      <Animatable.View
-        ref={this.ref}
-        style={[{
-          alignItems: 'stretch', justifyContent: 'center', position: 'relative',
-          width: cellSize * codeLength + cellSpacing * (codeLength - 1),
-          height: cellSize*codeRows + cellSpacing * (codeRows - 1),
-        },
-          containerStyle,
-        ]}>
-        <View>
-        {
-          Array.apply(null, Array(codeRows)).map((_, row) => {
-            return (
-              <View style={{
-                position: 'absolute', margin: 0, height: '100%',
-                flexDirection: 'row',
-                alignItems: 'center',
-                top: row*cellSize + row*cellSpacing
+        <Tooltip
+          isVisible={enableTooltip && this.toolTipVisible}
+          content={
+            <TouchableOpacity
+              style={{
+                backgroundColor: 'black',
               }}
-              key={row}
+              onPress={async () => {
+                let clipboardContent = await Clipboard.getString();
+                let len = Math.min(clipboardContent ? clipboardContent.length : 0, codeRows*codeLength - (value ? value.length : 0));
+                this._inputCode((value ? value : "") + (clipboardContent ? clipboardContent.substring(0, len) : ""))
+                this.toolTipVisible = false
+              }}
+            >
+              <Text
+                style={{color: 'white', paddingHorizontal: 8}}
               >
-                {
-                  Array.apply(null, Array(codeLength)).map((_, idx) => {
-                    const gIdx = row*codeLength + idx
-                    const cellFocused = focused && ((gIdx === value.length) || (value.length === codeLength*codeRows && gIdx === value.length - 1));
-                    const filled = gIdx < value.length;
-                    const last = (gIdx === value.length - 1);
-
-                    return (
-                      <Animatable.View
-                        key={gIdx}
-                        style={[
-                          {
-                            width: cellSize,
-                            height: cellSize,
-                            marginLeft: cellSpacing / 2,
-                            marginRight: cellSpacing / 2,
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          },
-                          cellStyle,
-                          cellFocused ? cellStyleFocused : {},
-                        ]}
-                        animation={gIdx === value.length && focused ? animationFocused : null}
-                        iterationCount="infinite"
-                        duration={500}
-                      >
-                        <Text
-                          style={[
-                            textStyle,
-                            cellFocused ? textStyleFocused : {},
-                          ]}>
-                          {filled && (password && (!maskDelay || !last)) ? mask : (value ? value.toUpperCase().charAt(gIdx) : '')}
-                          {!filled && placeholder}
-                        </Text>
-                      </Animatable.View>
-                    );
-                  })
-                }
-              </View>
-            );
-        })}
-        </View>
-        <TouchableOpacity
-          style={{
-              flex: 1,
-              opacity: 0,
-              textAlign: 'center',
-              alignItems: "flex-end",
-              flexDirection: "row",
-              marginTop: -cellSize/2,
-              marginBottom: cellSize/2,
-              marginLeft: cellSpacing/2,
-              marginRight: -cellSpacing/2,
-            }}
-          onPress={() => this.inputRef && this.inputRef.current.focus()}
-        >
-        <TextInput
-          textContentType={'password'}
-          value={value}
-          ref={this.inputRef}
-          testID={this.testID}
-          onChangeText={this._inputCode}
-          onKeyPress={this._keyPress}
-          onFocus={() => this._onFocused(true)}
-          onBlur={() => this._onFocused(false)}
-          spellCheck={false}
-          autoFocus={autoFocus}
-          keyboardType={keyboardType}
-          numberOfLines={codeRows}
-          maxLength={codeRows*codeLength}
-          selection={{
-            start: value.length,
-            end: value.length,
+                Paste
+              </Text>
+            </TouchableOpacity>
+          }
+          placement="auto"
+          onClose={() => {
+            this.toolTipVisible = false
           }}
-          style={{
-            textAlign: 'center',
-            opacity: 0
-          }} />
-          </TouchableOpacity>
-      </Animatable.View>
+          backgroundColor={'rgba(0,0,0,0)'}
+          contentStyle={{backgroundColor: 'black'}}
+          tooltipStyle={{marginBottom: 64, paddingBottom: 64}}
+          animated={false}
+        >
+          <Animatable.View
+            ref={this.ref}
+            style={[{
+              alignItems: 'stretch', justifyContent: 'center', position: 'relative',
+              width: cellSize * codeLength + cellSpacing * (codeLength - 1),
+              height: cellSize*codeRows + cellSpacing * (codeRows - 1),
+            },
+              containerStyle,
+            ]}
+          >
+            <View>
+            {
+              Array.apply(null, Array(codeRows)).map((_, row) => {
+                return (
+                  <View style={{
+                    position: 'absolute', margin: 0, height: '100%',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    top: row*cellSize + row*cellSpacing
+                  }}
+                  key={row}
+                  >
+                    {
+                      Array.apply(null, Array(codeLength)).map((_, idx) => {
+                        const gIdx = row*codeLength + idx
+                        const cellFocused = focused && ((gIdx === value.length) || (value.length === codeLength*codeRows && gIdx === value.length - 1));
+                        const filled = gIdx < value.length;
+                        const last = (gIdx === value.length - 1);
+
+                        return (
+                          <Animatable.View
+                            key={gIdx}
+                            style={[
+                              {
+                                width: cellSize,
+                                height: cellSize,
+                                marginLeft: cellSpacing / 2,
+                                marginRight: cellSpacing / 2,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              },
+                              cellStyle,
+                              cellFocused ? cellStyleFocused : {},
+                            ]}
+                            animation={gIdx === value.length && focused ? animationFocused : null}
+                            iterationCount="infinite"
+                            duration={500}
+                          >
+                            <Text
+                              style={[
+                                textStyle,
+                                cellFocused ? textStyleFocused : {},
+                              ]}>
+                              {filled && (password && (!maskDelay || !last)) ? mask : (value ? value.toUpperCase().charAt(gIdx) : '')}
+                              {!filled && placeholder}
+                            </Text>
+                          </Animatable.View>
+                        );
+                      })
+                    }
+                  </View>
+                );
+            })}
+            </View>
+
+            <TouchableOpacity
+              style={{
+                  flex: 1,
+                  opacity: 0,
+                  textAlign: 'center',
+                  alignItems: "flex-end",
+                  flexDirection: "row",
+                  marginTop: -cellSize/2,
+                  marginBottom: cellSize/2,
+                  marginLeft: cellSpacing/2,
+                  marginRight: -cellSpacing/2,
+                }}
+              ref={'touchableOpacity'}
+              onPress={() => {
+                this.inputRef && this.inputRef.current && this.inputRef.current.focus()
+                if (!this.toolTipVisible) {
+                  if (this.state.focused) {
+                    this.toolTipVisible = true
+                  }
+                } else {
+                  this.toolTipVisible = false
+                }
+              }}
+              onLongPress={() => {
+                this.inputRef && this.inputRef.current && this.inputRef.current.focus()
+                this.toolTipVisible = true
+              }}
+            >
+              <TextInput
+                textContentType={'password'}
+                value={value}
+                ref={this.inputRef}
+                testID={this.testID}
+                onChangeText={this._inputCode}
+                onKeyPress={this._keyPress}
+                onFocus={() => this._onFocused(true)}
+                onBlur={() => this._onFocused(false)}
+                spellCheck={false}
+                autoFocus={autoFocus}
+                keyboardType={keyboardType}
+                numberOfLines={codeRows}
+                maxLength={codeRows*codeLength}
+                selection={{
+                  start: value.length,
+                  end: value.length,
+                }}
+                style={{
+                  textAlign: 'center',
+                  opacity: 0
+                }} />
+              </TouchableOpacity>
+        </Animatable.View>
+      </Tooltip>
     );
   }
 
@@ -225,7 +284,9 @@ class SmoothPinCodeInput extends Component {
     textStyle: styles.textStyleDefault,
     textStyleFocused: styles.textStyleFocusedDefault,
     animationFocused: 'pulse',
-    ignoreCase: false
+    ignoreCase: false,
+    testID: null,
+    enableTooltip: false
   };
 }
 

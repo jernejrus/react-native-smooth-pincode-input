@@ -12,9 +12,6 @@ import {
 import * as Animatable from 'react-native-animatable';
 import Tooltip from 'react-native-walkthrough-tooltip';
 
-import {observer, inject} from "mobx-react/native";
-import {observable, action, computed, reaction} from "mobx";
-
 const styles = StyleSheet.create({
   containerDefault: {},
   cellDefault: {
@@ -34,15 +31,14 @@ const styles = StyleSheet.create({
   },
 });
 
-@observer
 class SmoothPinCodeInput extends Component {
 
   state = {
     maskDelay: false,
     focused: false,
+    toolTipVisible: false,
+    runAfterInteractions: false,
   };
-
-  @observable toolTipVisible = false
 
   ref = React.createRef();
   inputRef = React.createRef();
@@ -52,11 +48,13 @@ class SmoothPinCodeInput extends Component {
   };
 
   focus = () => {
-    return this.inputRef.current.focus();
+    this.inputRef && this.inputRef.current && this.inputRef.current.focus();
+    this.setState({ focused: true })
   };
 
   blur = () => {
-    return this.inputRef.current.blur();
+    this.inputRef && this.inputRef.current && this.inputRef.current.blur()
+    this.setState({ focused: false })
   };
 
   _inputCode = (code) => {
@@ -114,9 +112,12 @@ class SmoothPinCodeInput extends Component {
       enableTooltip
     } = this.props;
     const { maskDelay, focused } = this.state;
+    let isVisible = enableTooltip && this.state.toolTipVisible
     return (
         <Tooltip
-          isVisible={enableTooltip && this.toolTipVisible}
+          ref={'tooltip'}
+          isVisible={isVisible}
+          runAfterInteractions={this.state.runAfterInteractions}
           content={
             <TouchableOpacity
               style={{
@@ -126,7 +127,7 @@ class SmoothPinCodeInput extends Component {
                 let clipboardContent = await Clipboard.getString();
                 let len = Math.min(clipboardContent ? clipboardContent.length : 0, codeRows*codeLength - (value ? value.length : 0));
                 this._inputCode((value ? value : "") + (clipboardContent ? clipboardContent.substring(0, len) : ""))
-                this.toolTipVisible = false
+                this.setState({ toolTipVisible: false })
               }}
             >
               <Text
@@ -138,12 +139,14 @@ class SmoothPinCodeInput extends Component {
           }
           placement="auto"
           onClose={() => {
-            this.toolTipVisible = false
+            this.setState({ toolTipVisible: false })
+            this.blur()
           }}
           backgroundColor={'rgba(0,0,0,0)'}
           contentStyle={{backgroundColor: 'black'}}
           tooltipStyle={{marginBottom: 64, paddingBottom: 64}}
           animated={false}
+          marginBottom={cellSize/2}
         >
           <Animatable.View
             ref={this.ref}
@@ -163,7 +166,7 @@ class SmoothPinCodeInput extends Component {
                     position: 'absolute', margin: 0, height: '100%',
                     flexDirection: 'row',
                     alignItems: 'center',
-                    top: row*cellSize + row*cellSpacing
+                    top: row*cellSize + row*cellSpacing,
                   }}
                   key={row}
                   >
@@ -225,24 +228,31 @@ class SmoothPinCodeInput extends Component {
                 }}
               ref={'touchableOpacity'}
               onPress={() => {
-                this.inputRef && this.inputRef.current && this.inputRef.current.focus()
-                if (!this.toolTipVisible) {
-                  if (this.state.focused) {
-                    this.toolTipVisible = true
-                  }
+                if (this.refs.tooltip) {
+                  this.refs.tooltip.measureChildRect()
+                  this.setState({ runAfterInteractions: true })
+                }
+                if (this.state.focused) {
+                  this.setState({ toolTipVisible: !this.state.toolTipVisible })
                 } else {
-                  this.toolTipVisible = false
+                  this.focus()
                 }
               }}
               onLongPress={() => {
-                this.inputRef && this.inputRef.current && this.inputRef.current.focus()
-                this.toolTipVisible = true
+                if (this.refs.tooltip) {
+                  this.refs.tooltip.measureChildRect()
+                  this.setState({ runAfterInteractions: true })
+                }
+                if (!this.state.focused) {
+                  this.focus()
+                }
+                this.setState({ toolTipVisible: true })
               }}
             >
               <TextInput
                 textContentType={'password'}
                 value={value}
-                ref={this.inputRef}
+                ref={(ref) => this.inputRef.current = ref}
                 testID={this.testID}
                 onChangeText={this._inputCode}
                 onKeyPress={this._keyPress}
@@ -262,6 +272,7 @@ class SmoothPinCodeInput extends Component {
                   opacity: 0
                 }} />
               </TouchableOpacity>
+
         </Animatable.View>
       </Tooltip>
     );

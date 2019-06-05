@@ -184,6 +184,7 @@ class SmoothPinCodeInput extends Component {
         <TextInput
           textContentType={'none'}
           autoCompleteType={'off'}
+          secureTextEntry={true}
           value={value}
           ref={this.inputRef}
           testID={this.testID}

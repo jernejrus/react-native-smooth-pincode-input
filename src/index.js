@@ -87,13 +87,17 @@ class SmoothPinCodeInput extends Component {
     const {
       value,
       codeRows, codeLength, cellSize, cellSpacing,
+      rowLength,
+      groupInputsIn,
       placeholder,
+      focusedPlaceholder,
       password,
       mask,
       autoFocus,
       containerStyle,
       cellStyle,
       cellStyleFocused,
+      groupSpaceSize,
       textStyle,
       textStyleFocused,
       keyboardType,
@@ -115,21 +119,29 @@ class SmoothPinCodeInput extends Component {
         <View>
         {
           Array.apply(null, Array(codeRows)).map((_, row) => {
+            let realRowLength = rowLength || codeLength
+            let adjustedRowLength = realRowLength
+            if (codeLength - row * realRowLength < realRowLength) {
+              adjustedRowLength = codeLength - row * adjustedRowLength
+            }
             return (
               <View style={{
                 position: 'absolute', margin: 0, height: '100%',
                 flexDirection: 'row',
                 alignItems: 'center',
+                alignSelf: 'center',
                 top: row*cellSize + row*cellSpacing
               }}
               key={row}
               >
                 {
-                  Array.apply(null, Array(codeLength)).map((_, idx) => {
-                    const gIdx = row*codeLength + idx
-                    const cellFocused = focused && ((gIdx === value.length) || (value.length === codeLength*codeRows && gIdx === value.length - 1));
+                  Array.apply(null, Array(adjustedRowLength)).map((_, idx) => {
+                    const gIdx = row*realRowLength + idx
+                    const cellFocused = focused && ((gIdx === value.length) || (value.length === codeLength && gIdx === value.length - 1));
                     const filled = gIdx < value.length;
                     const last = (gIdx === value.length - 1);
+                    const addGroupSpaceRight = (gIdx + 1) % (groupInputsIn) === 0  && adjustedRowLength !== idx + 1
+                    const addGroupSpaceLeft = idx && gIdx % groupInputsIn === 0
 
                     return (
                       <Animatable.View
@@ -146,8 +158,10 @@ class SmoothPinCodeInput extends Component {
                           },
                           cellStyle,
                           cellFocused ? cellStyleFocused : {},
+                          addGroupSpaceRight ? {marginRight: groupSpaceSize / 2}  : {},
+                          addGroupSpaceLeft ? {marginLeft: groupSpaceSize / 2}  : {},
                         ]}
-                        animation={gIdx === value.length && focused ? animationFocused : null}
+                        animation={(gIdx === value.length || (codeLength === gIdx + 1 && codeLength === value.length)) && focused ? animationFocused : null}
                         iterationCount="infinite"
                         duration={500}
                       >
@@ -157,7 +171,7 @@ class SmoothPinCodeInput extends Component {
                             cellFocused ? textStyleFocused : {},
                           ]}>
                           {filled && (password && (!maskDelay || !last)) ? mask : (value ? value.toUpperCase().charAt(gIdx) : '')}
-                          {!filled && placeholder}
+                          {!filled && (cellFocused ? focusedPlaceholder : placeholder) }
                         </Text>
                       </Animatable.View>
                     );
@@ -217,6 +231,7 @@ class SmoothPinCodeInput extends Component {
     cellSize: 48,
     cellSpacing: 4,
     placeholder: '',
+    focusedPlaceholder: '',
     password: false,
     mask: '*',
     keyboardType: 'numeric',
@@ -224,6 +239,7 @@ class SmoothPinCodeInput extends Component {
     containerStyle: styles.containerDefault,
     cellStyle: styles.cellDefault,
     cellStyleFocused: styles.cellFocusedDefault,
+    groupSpaceSize: 10,
     textStyle: styles.textStyleDefault,
     textStyleFocused: styles.textStyleFocusedDefault,
     animationFocused: 'pulse',
@@ -234,9 +250,13 @@ class SmoothPinCodeInput extends Component {
 SmoothPinCodeInput.propTypes = {
   value: PropTypes.string,
   codeLength: PropTypes.number,
+  rowLength: PropTypes.number,
+  groupInputsIn: PropTypes.number,
   cellSize: PropTypes.number,
   cellSpacing: PropTypes.number,
+  groupSpaceSize: PropTypes.number,
 
+  focusedPlaceholder: PropTypes.string,
   placeholder: PropTypes.string,
   mask: PropTypes.string,
   password: PropTypes.bool,
